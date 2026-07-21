@@ -94,6 +94,18 @@ def test_available_damage_skill_is_used_on_final_wave_before_attack() -> None:
     assert "final wave" in decision.reasons
 
 
+def test_skill_confirmation_is_accepted_on_any_wave() -> None:
+    state = _state(
+        servant_skills=(_skill("confirm-skill-use", SkillPurpose.CONFIRMATION),),
+    )
+
+    decision = BattleDecisionEngine().plan(state)
+
+    assert decision.proposal.kind is ActionKind.USE_SKILL
+    assert decision.proposal.labels[0] == "skill:confirm-skill-use"
+    assert "verified skill confirmation" in decision.reasons
+
+
 def test_low_hp_survival_skill_wins_before_final_wave_damage_buff() -> None:
     state = _state(
         wave=3,

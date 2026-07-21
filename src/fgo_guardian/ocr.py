@@ -67,6 +67,8 @@ class TesseractOCREngine:
             raise ValueError("OCR expects an RGB or grayscale image")
         enlarged = cv2.resize(gray, None, fx=2.0, fy=2.0, interpolation=cv2.INTER_CUBIC)
         _, binary = cv2.threshold(enlarged, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        if float(np.mean(binary)) < 127.0:
+            binary = cv2.bitwise_not(binary)
         encoded, png = cv2.imencode(".png", binary)
         if not encoded:
             raise RuntimeError("failed to encode OCR region")

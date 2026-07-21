@@ -170,6 +170,51 @@ def test_result_and_dialogue_choice_use_visible_anchors_deterministically() -> N
     assert planner.plan(choice).target == choice.anchors["choice_1"]
 
 
+def test_bond_result_uses_its_verified_title_as_continue_target() -> None:
+    planner = QuestPlanner(QuestMode.STORY)
+    result = _recognition(
+        ScreenKind.QUEST_RESULT,
+        bond_title=Rect(160, 265, 550, 325),
+        bond_progress=Rect(210, 610, 455, 670),
+    )
+
+    action = planner.plan(result)
+
+    assert action.kind is ActionKind.COLLECT_RESULT
+    assert action.target == result.anchors["bond_title"]
+    assert action.labels == ("Quest result", "anchor:bond_title")
+
+
+def test_exp_result_uses_its_verified_title_as_continue_target() -> None:
+    planner = QuestPlanner(QuestMode.STORY)
+    result = _recognition(
+        ScreenKind.QUEST_RESULT,
+        exp_heading=Rect(720, 82, 1140, 165),
+        exp_title=Rect(945, 286, 1220, 350),
+    )
+
+    action = planner.plan(result)
+
+    assert action.kind is ActionKind.COLLECT_RESULT
+    assert action.target == result.anchors["exp_title"]
+    assert action.labels == ("Quest result", "anchor:exp_title")
+
+
+def test_clear_rewards_uses_verified_tap_to_continue_target() -> None:
+    planner = QuestPlanner(QuestMode.STORY)
+    result = _recognition(
+        ScreenKind.QUEST_RESULT,
+        clear_rewards_title=Rect(200, 145, 1650, 300),
+        tap_to_continue=Rect(650, 890, 1270, 970),
+    )
+
+    action = planner.plan(result)
+
+    assert action.kind is ActionKind.COLLECT_RESULT
+    assert action.target == result.anchors["tap_to_continue"]
+    assert action.labels == ("Quest result", "anchor:tap_to_continue")
+
+
 def test_unknown_or_unhandled_screen_never_produces_a_guess() -> None:
     planner = QuestPlanner(QuestMode.STORY)
 

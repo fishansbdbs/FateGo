@@ -10,3 +10,6 @@ build/
 dist/
 data/recordings/*
 !data/recordings/.gitignore
+data/experience/
+data/incidents/
+data/runs/

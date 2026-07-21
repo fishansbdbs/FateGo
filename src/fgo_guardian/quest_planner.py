@@ -228,11 +228,21 @@ class QuestPlanner:
         )
 
     def _result(self, state: Recognition) -> ActionProposal:
+        if "next" in state.anchors:
+            anchor = "next"
+        elif {"bond_title", "bond_progress"} <= set(state.anchors):
+            anchor = "bond_title"
+        elif {"exp_heading", "exp_title"} <= set(state.anchors):
+            anchor = "exp_title"
+        elif {"clear_rewards_title", "tap_to_continue"} <= set(state.anchors):
+            anchor = "tap_to_continue"
+        else:
+            raise PlannerSafetyError("quest result has no verified continue target")
         return self._proposal(
             state,
             ActionKind.COLLECT_RESULT,
-            self._target(state, "next"),
-            ("Quest result", "anchor:next"),
+            self._target(state, anchor),
+            ("Quest result", f"anchor:{anchor}"),
         )
 
     def _loading(self, state: Recognition) -> ActionProposal:

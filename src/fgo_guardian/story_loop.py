@@ -13,7 +13,7 @@ import numpy as np
 
 from .agent_models import ActionKind, ActionProposal, Observation, ResourceKind, ScreenKind
 from .battle import BattleDecisionEngine, BattleState
-from .controller import AutomationController, RunState, StopReason
+from .controller import AutomationController, RunInvalidatedError, RunState, StopReason
 from .experience import ExperienceStore
 from .models import Rect
 from .policy import PolicyGate
@@ -113,6 +113,47 @@ class TransitionVerifier(Protocol):
 
 
 class DefaultTransitionVerifier:
+    _EXPECTED_SUCCESSORS = {
+        ActionKind.SKIP_STORY: {ScreenKind.SKIP_CONFIRM, ScreenKind.LOADING},
+        ActionKind.CONFIRM_SKIP: {
+            ScreenKind.LOADING,
+            ScreenKind.QUEST_RESULT,
+            ScreenKind.STORY,
+            ScreenKind.TUTORIAL_MAP,
+            ScreenKind.BATTLE,
+        },
+        ActionKind.SELECT_QUEST: {ScreenKind.SUPPORT_SELECT, ScreenKind.LOADING},
+        ActionKind.SELECT_SUPPORT: {ScreenKind.PARTY_CONFIRM, ScreenKind.LOADING},
+        ActionKind.START_QUEST: {ScreenKind.STORY, ScreenKind.LOADING, ScreenKind.BATTLE},
+        ActionKind.SELECT_DIALOGUE: {
+            ScreenKind.DIALOGUE_CHOICE,
+            ScreenKind.STORY,
+            ScreenKind.LOADING,
+        },
+        ActionKind.COLLECT_RESULT: {
+            ScreenKind.QUEST_RESULT,
+            ScreenKind.BATTLE,
+            ScreenKind.LOADING,
+            ScreenKind.STORY,
+            ScreenKind.TUTORIAL_MAP,
+        },
+        ActionKind.ATTACK: {ScreenKind.BATTLE, ScreenKind.LOADING, ScreenKind.QUEST_RESULT},
+        ActionKind.USE_SKILL: {ScreenKind.BATTLE},
+        ActionKind.SELECT_COMMAND_CARD: {
+            ScreenKind.BATTLE,
+            ScreenKind.LOADING,
+            ScreenKind.QUEST_RESULT,
+        },
+        ActionKind.SELECT_NOBLE_PHANTASM: {
+            ScreenKind.BATTLE,
+            ScreenKind.LOADING,
+            ScreenKind.QUEST_RESULT,
+        },
+        ActionKind.SELECT_TARGET: {ScreenKind.BATTLE},
+        ActionKind.RETRY: {ScreenKind.LOADING, ScreenKind.BATTLE},
+        ActionKind.RESTORE_AP: {ScreenKind.LOADING, ScreenKind.SUPPORT_SELECT},
+    }
+
     def verify(
         self,
         before: Recognition,
@@ -121,10 +162,31 @@ class DefaultTransitionVerifier:
     ) -> VerificationResult:
         if before.frame_sha256 == after.frame_sha256:
             return VerificationResult(False, "fresh frame hash did not change")
+        expected = self._EXPECTED_SUCCESSORS.get(proposal.kind)
+        if expected is not None and after.screen not in expected:
+            return VerificationResult(
+                False,
+                f"{proposal.kind.value} did not reach an expected successor screen",
+            )
+        if before.screen is after.screen and before.screen is not ScreenKind.BATTLE:
+            changed_result_stage = (
+                proposal.kind is ActionKind.COLLECT_RESULT
+                and before.screen is ScreenKind.QUEST_RESULT
+            )
+            changed_dialogue_choice = (
+                proposal.kind is ActionKind.SELECT_DIALOGUE
+                and before.screen is ScreenKind.DIALOGUE_CHOICE
+                and before.anchors != after.anchors
+            )
+            if not changed_result_stage and not changed_dialogue_choice:
+                return VerificationResult(
+                    False,
+                    "screen family and verified anchors did not change after the action",
+                )
         completed = (
             before.screen is ScreenKind.QUEST_RESULT
             and proposal.kind is ActionKind.COLLECT_RESULT
-            and after.screen is not ScreenKind.QUEST_RESULT
+            and after.screen is ScreenKind.TUTORIAL_MAP
         )
         return VerificationResult(True, "fresh transition observed", completed)
 
@@ -187,6 +249,7 @@ class StoryLoop:
         stop_condition: StopCondition,
         experience: ExperienceStore | None = None,
         journal: LoopJournal | None = None,
+        shadow: bool = False,
     ) -> None:
         self.controller = controller
         self.observer = observer
@@ -202,13 +265,33 @@ class StoryLoop:
         self.stop_condition = stop_condition
         self.experience = experience
         self.journal = journal
+        self.shadow = shadow
         self.pending_transition: PendingTransition | None = None
+        self.awaiting_quest_return = False
         self.completed_quests = 0
         self.verified_transitions = 0
 
     def _log(self, event: str, **payload: object) -> None:
         if self.journal is not None:
             self.journal.append(event, payload)
+
+    def record_runtime_error(self, error: BaseException) -> None:
+        self._log(
+            "runtime_error",
+            error_type=type(error).__name__,
+            message=str(error),
+        )
+
+    def _complete_quest_if_returned(self, screen: ScreenKind) -> LoopOutcome | None:
+        if not self.awaiting_quest_return or screen is not ScreenKind.TUTORIAL_MAP:
+            return None
+        self.awaiting_quest_return = False
+        self.completed_quests += 1
+        self._log("quest_completed", completed_quests=self.completed_quests)
+        if self.stop_condition.reached(self.completed_quests):
+            self.controller.stop(StopReason.CONFIGURED_STOP)
+            return LoopOutcome.CONFIGURED_STOP
+        return None
 
     @staticmethod
     def _observation(recognition: Recognition, mapping: ViewportMapping) -> Observation:
@@ -253,12 +336,9 @@ class StoryLoop:
                 after_screen=after.screen,
                 verified=True,
             )
-        if result.quest_completed:
-            self.completed_quests += 1
-            if self.stop_condition.reached(self.completed_quests):
-                self.controller.stop(StopReason.CONFIGURED_STOP)
-                return LoopOutcome.CONFIGURED_STOP
-        return None
+        if pending.proposal.kind is ActionKind.COLLECT_RESULT:
+            self.awaiting_quest_return = True
+        return self._complete_quest_if_returned(after.screen)
 
     @staticmethod
     def _recovery_proposal(recognition: Recognition, decision: RecoveryDecision) -> ActionProposal:
@@ -340,6 +420,9 @@ class StoryLoop:
         verification_outcome = self._verify_pending(recognition)
         if verification_outcome is not None:
             return verification_outcome
+        quest_outcome = self._complete_quest_if_returned(recognition.screen)
+        if quest_outcome is not None:
+            return quest_outcome
 
         outcome, proposal = self._route(recognition, observed)
         if proposal is None:
@@ -351,8 +434,29 @@ class StoryLoop:
         try:
             token = self.authorizer.authorize(state, proposal)
             self.controller.require_running(permit)
+            if self.shadow:
+                self._log(
+                    "shadow_action",
+                    action=proposal.kind.value,
+                    frame_sha256=recognition.frame_sha256,
+                    target=None if proposal.target is None else proposal.target.as_tuple(),
+                )
+                return LoopOutcome.WAITING
             self.executor.execute_one(token, state, proposal)
+            record_action = getattr(self.battle_provider, "record_action", None)
+            if callable(record_action) and recognition.screen is ScreenKind.BATTLE:
+                record_action(proposal)
+        except RunInvalidatedError as error:
+            self._log("run_invalidated", reason=str(error), action=proposal.kind.value)
+            return LoopOutcome.STOPPED
         except PermissionError as error:
+            current = self.controller.snapshot().state
+            if current is RunState.PAUSED:
+                self._log("executor_paused", reason=str(error), action=proposal.kind.value)
+                return LoopOutcome.PAUSED
+            if current in {RunState.STOPPED, RunState.EMERGENCY_STOPPED}:
+                self._log("executor_stopped", reason=str(error), action=proposal.kind.value)
+                return LoopOutcome.STOPPED
             self._log("policy_stop", reason=str(error), action=proposal.kind.value)
             self.controller.stop(StopReason.POLICY_REJECTED)
             return LoopOutcome.STOPPED

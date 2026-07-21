@@ -154,6 +154,161 @@ class ScreenRecognizer:
             frame_hash,
         )
 
+    @staticmethod
+    def _loading_transition(
+        gray: np.ndarray,
+        mapping: ViewportMapping,
+        frame_hash: str,
+    ) -> Recognition | None:
+        """Recognize FGO's black inter-wave transition without guessing an action."""
+        viewport = mapping.viewport
+        crop = gray[viewport.top : viewport.bottom, viewport.left : viewport.right]
+        height, width = crop.shape
+        white_ratio = float(np.mean(crop >= 245))
+        top_left_dark = float(np.mean(crop[: round(height * 0.16), : round(width * 0.25)] <= 16))
+        bottom_left_dark = float(np.mean(crop[round(height * 0.80) :, : round(width * 0.25)] <= 16))
+        center_white = float(
+            np.mean(
+                crop[
+                    round(height * 0.20) : round(height * 0.70),
+                    round(width * 0.30) : round(width * 0.90),
+                ]
+                >= 245
+            )
+        )
+        if (
+            white_ratio >= 0.75
+            and top_left_dark >= 0.90
+            and bottom_left_dark >= 0.80
+            and center_white >= 0.95
+        ):
+            margin = min(
+                1.0,
+                max(0.0, (white_ratio - 0.75) / 0.15),
+                max(0.0, (top_left_dark - 0.90) / 0.10),
+                max(0.0, (bottom_left_dark - 0.80) / 0.20),
+                max(0.0, (center_white - 0.95) / 0.05),
+            )
+            confidence = 0.92 + 0.079 * margin
+            center = Rect(
+                viewport.left + round(width * 0.30),
+                viewport.top + round(height * 0.20),
+                viewport.left + round(width * 0.90),
+                viewport.top + round(height * 0.70),
+            )
+            return Recognition(
+                ScreenKind.LOADING,
+                confidence,
+                MappingProxyType({"loading_flash_center": center}),
+                MappingProxyType({}),
+                (
+                    f"semantic:white-flash:{white_ratio:.4f}",
+                    f"semantic:flash-center:{center_white:.4f}",
+                ),
+                frame_hash,
+            )
+        dark_ratio = float(np.mean(crop <= 16))
+        if dark_ratio < 0.98:
+            return None
+        bottom_height = max(4, round(crop.shape[0] * 0.015))
+        bottom = crop[-bottom_height:]
+        bright = bottom >= 180
+        row_support = np.mean(bright, axis=1)
+        best_row = int(np.argmax(row_support))
+        best_support = float(row_support[best_row])
+        if best_support < 0.55:
+            return None
+        columns = np.flatnonzero(bright[best_row])
+        if columns.size == 0:
+            return None
+        absolute_top = viewport.bottom - bottom_height + best_row
+        bar = Rect(
+            viewport.left + int(columns[0]),
+            absolute_top,
+            viewport.left + int(columns[-1]) + 1,
+            absolute_top + 1,
+        )
+        margin = min(
+            1.0,
+            max(0.0, (dark_ratio - 0.98) / 0.02),
+            max(0.0, (best_support - 0.55) / 0.30),
+        )
+        confidence = 0.92 + 0.079 * margin
+        return Recognition(
+            ScreenKind.LOADING,
+            confidence,
+            MappingProxyType({"loading_navigation_bar": bar}),
+            MappingProxyType({}),
+            (
+                f"semantic:dark-transition:{dark_ratio:.4f}",
+                f"semantic:navigation-bar:{best_support:.4f}",
+            ),
+            frame_hash,
+        )
+
+    def _skip_processing_transition(
+        self,
+        frame: np.ndarray,
+        gray: np.ndarray,
+        mapping: ViewportMapping,
+        frame_hash: str,
+    ) -> Recognition | None:
+        """Recognize the deterministic blue spinner after confirming Story skip."""
+        skip_match: tuple[float, Rect] | None = None
+        for rule in self.catalog.rules:
+            if rule.screen is not ScreenKind.STORY:
+                continue
+            for anchor in rule.anchors:
+                if anchor.name == "skip":
+                    skip_match = self._match_anchor(gray, mapping, anchor)
+                    break
+            break
+        if skip_match is None:
+            return None
+
+        spinner = mapping.normalized_rect((0.60, 0.70, 0.69, 0.87))
+        crop = frame[spinner.top : spinner.bottom, spinner.left : spinner.right]
+        hsv = cv2.cvtColor(crop, cv2.COLOR_RGB2HSV)
+        blue = (
+            (hsv[:, :, 0] >= 85)
+            & (hsv[:, :, 0] <= 135)
+            & (hsv[:, :, 1] >= 100)
+            & (hsv[:, :, 2] >= 120)
+        ).astype(np.uint8)
+        blue_ratio = float(np.mean(blue))
+        component_count, _, stats, _ = cv2.connectedComponentsWithStats(blue, 8)
+        visible_pieces = sum(
+            int(area) >= 20
+            for area in stats[1:component_count, cv2.CC_STAT_AREA]
+        )
+        if blue_ratio < 0.15 or visible_pieces < 8:
+            return None
+
+        margin = min(
+            1.0,
+            max(0.0, (blue_ratio - 0.15) / 0.10),
+            max(0.0, (visible_pieces - 8) / 8),
+        )
+        skip_score, skip_rect = skip_match
+        confidence = min(skip_score, 0.92 + 0.079 * margin)
+        return Recognition(
+            ScreenKind.LOADING,
+            confidence,
+            MappingProxyType(
+                {
+                    "skip": skip_rect,
+                    "skip_processing_spinner": spinner,
+                }
+            ),
+            MappingProxyType({}),
+            (
+                f"template:skip:{skip_score:.4f}",
+                f"semantic:skip-processing-blue:{blue_ratio:.4f}",
+                f"semantic:skip-processing-pieces:{visible_pieces}",
+            ),
+            frame_hash,
+        )
+
     def recognize(self, frame: np.ndarray, mapping: ViewportMapping) -> Recognition:
         frame_hash = self._frame_hash(frame)
         self._validate_mapping(frame, mapping)
@@ -164,6 +319,12 @@ class ScreenRecognizer:
             if (candidate := self._candidate(gray, mapping, rule)) is not None
         ]
         if not accepted:
+            skip_processing = self._skip_processing_transition(frame, gray, mapping, frame_hash)
+            if skip_processing is not None:
+                return skip_processing
+            loading = self._loading_transition(gray, mapping, frame_hash)
+            if loading is not None:
+                return loading
             return self._unknown(frame_hash, "no-screen-rule-passed")
 
         accepted_screens = {candidate.rule.screen for candidate in accepted}

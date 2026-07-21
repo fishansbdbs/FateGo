@@ -13,7 +13,7 @@ from fgo_guardian.models import Rect
 from fgo_guardian.ocr import NullOCREngine, OCRResult, TesseractOCREngine
 from fgo_guardian.recognition import Recognition, ScreenRecognizer
 from fgo_guardian.template_catalog import TemplateCatalog
-from fgo_guardian.viewport_mapper import ViewportMapping
+from fgo_guardian.viewport_mapper import ViewportMapper, ViewportMapping
 
 
 SCREEN_FAMILIES = (
@@ -118,6 +118,42 @@ def test_unrelated_conflicting_anchors_return_unknown(tmp_path: Path) -> None:
     assert "conflict:BATTLE,STORY" in result.evidence
 
 
+def test_dark_transition_with_android_navigation_bar_is_loading(tmp_path: Path) -> None:
+    catalog, _ = _catalog(tmp_path)
+    recognizer = ScreenRecognizer(catalog, NullOCREngine())
+    frame = np.zeros((1032, 1920, 3), dtype=np.uint8)
+    frame[1029:1032, 584:1819] = 208
+    mapping = ViewportMapping(Rect(55, 40, 1819, 1032), 40, 1819)
+
+    result = recognizer.recognize(frame, mapping)
+
+    assert result.screen is ScreenKind.LOADING
+    assert result.confidence >= 0.92
+    assert "loading_navigation_bar" in result.anchors
+
+    frame[1029:1032, 584:1819] = 0
+    assert recognizer.recognize(frame, mapping).screen is ScreenKind.UNKNOWN
+
+
+def test_structured_white_battle_flash_is_loading(tmp_path: Path) -> None:
+    catalog, _ = _catalog(tmp_path)
+    recognizer = ScreenRecognizer(catalog, NullOCREngine())
+    frame = np.zeros((1032, 1920, 3), dtype=np.uint8)
+    frame[40:794, 496:1819] = 255
+    frame[199:794, 55:1819] = 255
+    frame[794:1032, 584:1819] = 255
+    mapping = ViewportMapping(Rect(55, 40, 1819, 1032), 40, 1819)
+
+    result = recognizer.recognize(frame, mapping)
+
+    assert result.screen is ScreenKind.LOADING
+    assert result.confidence >= 0.92
+    assert "loading_flash_center" in result.anchors
+
+    frame[:] = 255
+    assert recognizer.recognize(frame, mapping).screen is ScreenKind.UNKNOWN
+
+
 def test_specific_overlay_supersedes_its_parent_screen(tmp_path: Path) -> None:
     catalog, templates = _catalog(tmp_path)
     recognizer = ScreenRecognizer(catalog, NullOCREngine())
@@ -212,3 +248,298 @@ def test_recorded_fuyuki_screen_family_is_recognized(
         assert "teapot_off" in result.anchors
     if screen is ScreenKind.TUTORIAL_MAP:
         assert {"main_quest", "free_quest"} <= set(result.anchors)
+
+
+@pytest.mark.skipif(not RECORDED_ROOT.exists(), reason="local redacted Fuyuki recording is unavailable")
+@pytest.mark.parametrize(
+    "observation_id",
+    [
+        "obs-a55a3ba1e0d044b5a57f287e3e185fb9",
+        "obs-872c3b0e81594fb7b1be64ab9ab3046e",
+    ],
+)
+def test_normal_attack_and_command_battle_variants_are_recognized(observation_id: str) -> None:
+    project_root = Path(__file__).parents[1]
+    catalog = TemplateCatalog.load(project_root / "templates" / "manifest.json")
+    recognizer = ScreenRecognizer(catalog, NullOCREngine())
+    bgr = cv2.imread(str(RECORDED_ROOT / "frames" / f"{observation_id}.png"))
+    assert bgr is not None
+    frame = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+
+    result = recognizer.recognize(
+        frame,
+        ViewportMapping(Rect(55, 40, 1819, 1032), 40, 1819),
+    )
+
+    assert result.screen is ScreenKind.BATTLE
+    assert result.confidence >= 0.92
+
+
+LIVE_LOADING_CANDIDATE = Path(__file__).parents[1] / "data" / "experience" / "quarantine" / "frames" / "candidate-624ac3e013a94770e50e13e1.png"
+LIVE_FLASH_CANDIDATE = Path(__file__).parents[1] / "data" / "experience" / "quarantine" / "frames" / "candidate-a58a8d257e3474e7f61eaa94.png"
+LIVE_SKILL_ANIMATION = Path(__file__).parents[1] / "data" / "experience" / "quarantine" / "frames" / "candidate-1c9a255c6b09b3aa0c6f9987.png"
+LIVE_BOND_RESULT = Path(__file__).parents[1] / "data" / "experience" / "quarantine" / "frames" / "candidate-43177c7e7276f3158d5f9aad.png"
+LIVE_EXP_RESULT = Path(__file__).parents[1] / "data" / "runs" / "current-exp-result.png"
+LIVE_STORY_LOADING = Path(__file__).parents[1] / "data" / "experience" / "quarantine" / "frames" / "candidate-36ca4375e7e1e0ad6acc9a61.png"
+LIVE_POST_BATTLE_STORY = Path(__file__).parents[1] / "data" / "experience" / "quarantine" / "frames" / "candidate-c2726967ff039219ec104220.png"
+LIVE_POST_BATTLE_STORY_ANIMATED = Path(__file__).parents[1] / "data" / "experience" / "quarantine" / "frames" / "candidate-696e8d753e5b8cfc8cab44f0.png"
+LIVE_SKIP_PROCESSING = Path(__file__).parents[1] / "data" / "experience" / "quarantine" / "frames" / "candidate-e9cde9700e2aae31fef29c9a.png"
+LIVE_CLEAR_REWARDS = Path(__file__).parents[1] / "data" / "experience" / "quarantine" / "frames" / "candidate-5f8accd0ba262372c5594c68.png"
+LIVE_CLEAR_REWARDS_RAW = Path(__file__).parents[1] / "data" / "runs" / "current-clear-rewards-raw.png"
+LIVE_FUYUKI_X_C_MAP = Path(__file__).parents[1] / "data" / "experience" / "quarantine" / "frames" / "candidate-3b0b8be9d8b3bd60dc8607d3.png"
+LIVE_FUYUKI_X_B_MAP = Path(__file__).parents[1] / "data" / "experience" / "quarantine" / "frames" / "candidate-9d6830e637e7a50a2b6f41c4.png"
+
+
+@pytest.mark.skipif(not LIVE_LOADING_CANDIDATE.exists(), reason="local quarantined transition is unavailable")
+def test_quarantined_black_battle_transition_is_loading() -> None:
+    project_root = Path(__file__).parents[1]
+    catalog = TemplateCatalog.load(project_root / "templates" / "manifest.json")
+    recognizer = ScreenRecognizer(catalog, NullOCREngine())
+    bgr = cv2.imread(str(LIVE_LOADING_CANDIDATE))
+    assert bgr is not None
+
+    result = recognizer.recognize(
+        cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB),
+        ViewportMapping(Rect(55, 40, 1819, 1032), 40, 1819),
+    )
+
+    assert result.screen is ScreenKind.LOADING
+    assert result.confidence >= 0.92
+
+
+@pytest.mark.skipif(not LIVE_FLASH_CANDIDATE.exists(), reason="local quarantined battle flash is unavailable")
+def test_quarantined_white_battle_flash_is_loading() -> None:
+    project_root = Path(__file__).parents[1]
+    recognizer = ScreenRecognizer(
+        TemplateCatalog.load(project_root / "templates" / "manifest.json"),
+        NullOCREngine(),
+    )
+    bgr = cv2.imread(str(LIVE_FLASH_CANDIDATE))
+    assert bgr is not None
+
+    result = recognizer.recognize(
+        cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB),
+        ViewportMapping(Rect(55, 40, 1819, 1032), 40, 1819),
+    )
+
+    assert result.screen is ScreenKind.LOADING
+    assert result.confidence >= 0.92
+
+
+@pytest.mark.skipif(not LIVE_SKILL_ANIMATION.exists(), reason="local skill animation is unavailable")
+def test_quarantined_skill_animation_is_battle() -> None:
+    project_root = Path(__file__).parents[1]
+    recognizer = ScreenRecognizer(
+        TemplateCatalog.load(project_root / "templates" / "manifest.json"),
+        NullOCREngine(),
+    )
+    bgr = cv2.imread(str(LIVE_SKILL_ANIMATION))
+    assert bgr is not None
+
+    result = recognizer.recognize(
+        cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB),
+        ViewportMapping(Rect(55, 40, 1819, 1032), 40, 1819),
+    )
+
+    assert result.screen is ScreenKind.BATTLE
+    assert result.confidence >= 0.92
+
+
+@pytest.mark.skipif(not LIVE_BOND_RESULT.exists(), reason="local bond result is unavailable")
+def test_quarantined_bond_result_is_quest_result() -> None:
+    project_root = Path(__file__).parents[1]
+    recognizer = ScreenRecognizer(
+        TemplateCatalog.load(project_root / "templates" / "manifest.json"),
+        NullOCREngine(),
+    )
+    bgr = cv2.imread(str(LIVE_BOND_RESULT))
+    assert bgr is not None
+
+    result = recognizer.recognize(
+        cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB),
+        ViewportMapping(Rect(55, 40, 1819, 1032), 40, 1819),
+    )
+
+    assert result.screen is ScreenKind.QUEST_RESULT
+    assert result.confidence >= 0.92
+    assert {"bond_title", "bond_progress"} <= set(result.anchors)
+
+
+@pytest.mark.skipif(not LIVE_EXP_RESULT.exists(), reason="local EXP result is unavailable")
+def test_live_exp_result_is_quest_result() -> None:
+    project_root = Path(__file__).parents[1]
+    recognizer = ScreenRecognizer(
+        TemplateCatalog.load(project_root / "templates" / "manifest.json"),
+        NullOCREngine(),
+    )
+    bgr = cv2.imread(str(LIVE_EXP_RESULT))
+    assert bgr is not None
+
+    result = recognizer.recognize(
+        cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB),
+        ViewportMapping(Rect(55, 40, 1819, 1032), 40, 1819),
+    )
+
+    assert result.screen is ScreenKind.QUEST_RESULT
+    assert result.confidence >= 0.92
+    assert {"exp_heading", "exp_title"} <= set(result.anchors)
+
+
+@pytest.mark.skipif(not LIVE_STORY_LOADING.exists(), reason="local Story loading frame is unavailable")
+def test_story_loading_frame_is_loading() -> None:
+    project_root = Path(__file__).parents[1]
+    recognizer = ScreenRecognizer(
+        TemplateCatalog.load(project_root / "templates" / "manifest.json"),
+        NullOCREngine(),
+    )
+    bgr = cv2.imread(str(LIVE_STORY_LOADING))
+    assert bgr is not None
+
+    result = recognizer.recognize(
+        cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB),
+        ViewportMapping(Rect(55, 40, 1819, 1032), 40, 1819),
+    )
+
+    assert result.screen is ScreenKind.LOADING
+    assert result.confidence >= 0.92
+
+
+@pytest.mark.skipif(not LIVE_POST_BATTLE_STORY.exists(), reason="local post-battle Story frame is unavailable")
+def test_post_battle_story_variant_is_story() -> None:
+    project_root = Path(__file__).parents[1]
+    recognizer = ScreenRecognizer(
+        TemplateCatalog.load(project_root / "templates" / "manifest.json"),
+        NullOCREngine(),
+    )
+    bgr = cv2.imread(str(LIVE_POST_BATTLE_STORY))
+    assert bgr is not None
+
+    result = recognizer.recognize(
+        cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB),
+        ViewportMapping(Rect(55, 40, 1819, 1032), 40, 1819),
+    )
+
+    assert result.screen is ScreenKind.STORY
+    assert result.confidence >= 0.92
+    assert {"skip", "dialogue_controls_live"} <= set(result.anchors)
+
+
+@pytest.mark.skipif(
+    not LIVE_POST_BATTLE_STORY_ANIMATED.exists(),
+    reason="local animated post-battle Story frame is unavailable",
+)
+def test_post_battle_story_control_animation_is_story() -> None:
+    project_root = Path(__file__).parents[1]
+    recognizer = ScreenRecognizer(
+        TemplateCatalog.load(project_root / "templates" / "manifest.json"),
+        NullOCREngine(),
+    )
+    bgr = cv2.imread(str(LIVE_POST_BATTLE_STORY_ANIMATED))
+    assert bgr is not None
+
+    result = recognizer.recognize(
+        cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB),
+        ViewportMapping(Rect(55, 40, 1819, 1032), 40, 1819),
+    )
+
+    assert result.screen is ScreenKind.STORY
+    assert result.confidence >= 0.92
+    assert {"skip", "dialogue_controls_live"} <= set(result.anchors)
+
+
+@pytest.mark.skipif(not LIVE_SKIP_PROCESSING.exists(), reason="local Skip processing frame is unavailable")
+def test_skip_confirmation_processing_overlay_is_loading() -> None:
+    project_root = Path(__file__).parents[1]
+    recognizer = ScreenRecognizer(
+        TemplateCatalog.load(project_root / "templates" / "manifest.json"),
+        NullOCREngine(),
+    )
+    bgr = cv2.imread(str(LIVE_SKIP_PROCESSING))
+    assert bgr is not None
+
+    result = recognizer.recognize(
+        cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB),
+        ViewportMapping(Rect(55, 40, 1819, 1032), 40, 1819),
+    )
+
+    assert result.screen is ScreenKind.LOADING
+    assert result.confidence >= 0.92
+    assert "skip_processing_spinner" in result.anchors
+
+
+@pytest.mark.skipif(not LIVE_CLEAR_REWARDS.exists(), reason="local clear rewards frame is unavailable")
+def test_clear_rewards_variant_is_quest_result() -> None:
+    project_root = Path(__file__).parents[1]
+    recognizer = ScreenRecognizer(
+        TemplateCatalog.load(project_root / "templates" / "manifest.json"),
+        NullOCREngine(),
+    )
+    bgr = cv2.imread(str(LIVE_CLEAR_REWARDS))
+    assert bgr is not None
+
+    result = recognizer.recognize(
+        cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB),
+        ViewportMapping(Rect(55, 40, 1819, 1032), 40, 1819),
+    )
+
+    assert result.screen is ScreenKind.QUEST_RESULT
+    assert result.confidence >= 0.92
+    assert {"clear_rewards_title", "tap_to_continue"} <= set(result.anchors)
+
+
+@pytest.mark.skipif(not LIVE_CLEAR_REWARDS_RAW.exists(), reason="local raw clear rewards frame is unavailable")
+def test_raw_clear_rewards_variant_is_quest_result() -> None:
+    project_root = Path(__file__).parents[1]
+    recognizer = ScreenRecognizer(
+        TemplateCatalog.load(project_root / "templates" / "manifest.json"),
+        NullOCREngine(),
+    )
+    bgr = cv2.imread(str(LIVE_CLEAR_REWARDS_RAW))
+    assert bgr is not None
+
+    frame = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+    result = recognizer.recognize(frame, ViewportMapper().locate(frame))
+
+    assert result.screen is ScreenKind.QUEST_RESULT
+    assert result.confidence >= 0.92
+    assert {"clear_rewards_title", "tap_to_continue"} <= set(result.anchors)
+
+
+@pytest.mark.skipif(not LIVE_FUYUKI_X_C_MAP.exists(), reason="local Fuyuki X-C map frame is unavailable")
+def test_fuyuki_x_c_map_variant_is_tutorial_map() -> None:
+    project_root = Path(__file__).parents[1]
+    recognizer = ScreenRecognizer(
+        TemplateCatalog.load(project_root / "templates" / "manifest.json"),
+        NullOCREngine(),
+    )
+    bgr = cv2.imread(str(LIVE_FUYUKI_X_C_MAP))
+    assert bgr is not None
+
+    result = recognizer.recognize(
+        cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB),
+        ViewportMapping(Rect(55, 40, 1819, 1032), 40, 1819),
+    )
+
+    assert result.screen is ScreenKind.TUTORIAL_MAP
+    assert result.confidence >= 0.92
+    assert {"menu", "main_quest_x_c"} <= set(result.anchors)
+
+
+@pytest.mark.skipif(not LIVE_FUYUKI_X_B_MAP.exists(), reason="local settled Fuyuki X-B map is unavailable")
+def test_settled_fuyuki_x_b_map_is_tutorial_map() -> None:
+    project_root = Path(__file__).parents[1]
+    recognizer = ScreenRecognizer(
+        TemplateCatalog.load(project_root / "templates" / "manifest.json"),
+        NullOCREngine(),
+    )
+    bgr = cv2.imread(str(LIVE_FUYUKI_X_B_MAP))
+    assert bgr is not None
+
+    result = recognizer.recognize(
+        cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB),
+        ViewportMapping(Rect(55, 40, 1819, 1032), 40, 1819),
+    )
+
+    assert result.screen is ScreenKind.TUTORIAL_MAP
+    assert result.confidence >= 0.92
+    assert {"menu", "main_quest_x_b"} <= set(result.anchors)

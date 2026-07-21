@@ -25,6 +25,7 @@ class CardColor(str, Enum):
 
 
 class SkillPurpose(str, Enum):
+    CONFIRMATION = "CONFIRMATION"
     SURVIVAL = "SURVIVAL"
     HEAL = "HEAL"
     NP_CHARGE = "NP_CHARGE"
@@ -215,7 +216,10 @@ class BattleDecisionEngine:
         high_hp_enemy = any(enemy.hp >= 15000 or enemy.max_hp >= 20000 for enemy in living_enemies)
         reasons: list[str] = []
         score = 0
-        if skill.purpose is SkillPurpose.SURVIVAL and lowest_hp <= self.policy.low_hp_ratio:
+        if skill.purpose is SkillPurpose.CONFIRMATION:
+            score = self.policy.np_score + skill.power
+            reasons.append("verified skill confirmation")
+        elif skill.purpose is SkillPurpose.SURVIVAL and lowest_hp <= self.policy.low_hp_ratio:
             score = self.policy.survival_score + skill.power
             reasons.append("low ally HP")
         elif skill.purpose is SkillPurpose.HEAL and lowest_hp <= self.policy.low_hp_ratio:

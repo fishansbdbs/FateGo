@@ -6,6 +6,10 @@ from threading import RLock
 from typing import Callable
 
 
+class RunInvalidatedError(PermissionError):
+    """Raised when work belongs to a live run that has been cancelled."""
+
+
 class RunState(StrEnum):
     DISARMED = "DISARMED"
     RUNNING = "RUNNING"
@@ -120,10 +124,10 @@ class AutomationController:
 
     def require_running(self, permit: ActionPermit | None = None) -> None:
         with self._lock:
+            if permit is not None and permit.revision != self._revision:
+                raise RunInvalidatedError("action permit belongs to an inactive run")
             if self._state is not RunState.RUNNING:
                 raise PermissionError(f"controller is {self._state.value.lower()}")
-            if permit is not None and permit.revision != self._revision:
-                raise PermissionError("action permit is stale")
 
     def step(self, stepper: Callable[[], None]) -> bool:
         permit = self.issue_permit()
@@ -132,6 +136,14 @@ class AutomationController:
         self.require_running(permit)
         stepper()
         return True
+
+    def perform_if_running(self, action: Callable[[], None]) -> bool:
+        """Keep lifecycle transitions atomic with a very short external action."""
+        with self._lock:
+            if self._state is not RunState.RUNNING:
+                return False
+            action()
+            return True
 
     def _snapshot_locked(self) -> ControllerSnapshot:
         return ControllerSnapshot(self._state, self._reason, self._revision)

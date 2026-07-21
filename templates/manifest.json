@@ -5,7 +5,8 @@
       "minimum_matches": 2,
       "anchors": [
         {"name": "skip", "template": "story-skip.png", "search_region": [0.84, 0.0, 1.0, 0.14], "threshold": 0.92, "scales": [0.9, 0.95, 1.0, 1.05, 1.1]},
-        {"name": "dialogue_controls", "template": "story-dialogue-controls.png", "search_region": [0.91, 0.72, 0.99, 0.99], "threshold": 0.92, "scales": [0.9, 0.95, 1.0, 1.05, 1.1]}
+        {"name": "dialogue_controls", "template": "story-dialogue-controls.png", "search_region": [0.91, 0.72, 0.99, 0.99], "threshold": 0.92, "scales": [0.9, 0.95, 1.0, 1.05, 1.1]},
+        {"name": "dialogue_controls_live", "template": "story-dialogue-controls-live.png", "search_region": [0.91, 0.72, 0.99, 0.99], "threshold": 0.92, "scales": [0.9, 0.95, 1.0, 1.05, 1.1]}
       ],
       "ocr": [],
       "supersedes": []
@@ -42,7 +43,11 @@
       "minimum_matches": 2,
       "anchors": [
         {"name": "battle_label", "template": "battle-label.png", "search_region": [0.55, 0.0, 0.85, 0.13], "threshold": 0.92, "scales": [0.9, 0.95, 1.0, 1.05, 1.1]},
-        {"name": "enemy_label", "template": "battle-enemy.png", "search_region": [0.54, 0.03, 0.86, 0.20], "threshold": 0.92, "scales": [0.9, 0.95, 1.0, 1.05, 1.1]}
+        {"name": "enemy_label", "template": "battle-enemy.png", "search_region": [0.54, 0.03, 0.86, 0.20], "threshold": 0.92, "scales": [0.9, 0.95, 1.0, 1.05, 1.1]},
+        {"name": "battle_label_live", "template": "battle-live-label.png", "search_region": [0.55, 0.0, 0.85, 0.13], "threshold": 0.92, "scales": [0.9, 0.95, 1.0, 1.05, 1.1]},
+        {"name": "enemy_label_live", "template": "battle-live-enemy.png", "search_region": [0.54, 0.03, 0.86, 0.20], "threshold": 0.92, "scales": [0.9, 0.95, 1.0, 1.05, 1.1]},
+        {"name": "battle_label_skill_animation", "template": "battle-skill-animation-label.png", "search_region": [0.55, 0.0, 0.85, 0.13], "threshold": 0.92, "scales": [0.9, 0.95, 1.0, 1.05, 1.1]},
+        {"name": "enemy_label_skill_animation", "template": "battle-skill-animation-enemy.png", "search_region": [0.54, 0.03, 0.86, 0.20], "threshold": 0.92, "scales": [0.9, 0.95, 1.0, 1.05, 1.1]}
       ],
       "ocr": [],
       "supersedes": []
@@ -51,7 +56,13 @@
       "minimum_matches": 2,
       "anchors": [
         {"name": "items", "template": "result-items.png", "search_region": [0.04, 0.0, 0.42, 0.18], "threshold": 0.92, "scales": [0.9, 0.95, 1.0, 1.05, 1.1]},
-        {"name": "next", "template": "result-next.png", "search_region": [0.68, 0.75, 1.0, 1.0], "threshold": 0.92, "scales": [0.9, 0.95, 1.0, 1.05, 1.1]}
+        {"name": "next", "template": "result-next.png", "search_region": [0.68, 0.75, 1.0, 1.0], "threshold": 0.92, "scales": [0.9, 0.95, 1.0, 1.05, 1.1]},
+        {"name": "bond_title", "template": "result-bond-title.png", "search_region": [0.04, 0.18, 0.40, 0.38], "threshold": 0.92, "scales": [0.9, 0.95, 1.0, 1.05, 1.1]},
+        {"name": "bond_progress", "template": "result-bond-progress.png", "search_region": [0.03, 0.50, 0.35, 0.72], "threshold": 0.92, "scales": [0.9, 0.95, 1.0, 1.05, 1.1]},
+        {"name": "exp_heading", "template": "result-exp-heading.png", "search_region": [0.32, 0.0, 0.68, 0.18], "threshold": 0.92, "scales": [0.9, 0.95, 1.0, 1.05, 1.1]},
+        {"name": "exp_title", "template": "result-exp-title.png", "search_region": [0.45, 0.20, 0.75, 0.40], "threshold": 0.92, "scales": [0.9, 0.95, 1.0, 1.05, 1.1]},
+        {"name": "clear_rewards_title", "template": "result-clear-rewards-title.png", "search_region": [0.05, 0.05, 0.95, 0.33], "threshold": 0.92, "scales": [0.9, 0.95, 1.0, 1.05]},
+        {"name": "tap_to_continue", "template": "result-tap-to-continue.png", "search_region": [0.28, 0.78, 0.76, 0.99], "threshold": 0.92, "scales": [0.9, 0.95, 1.0, 1.05, 1.1]}
       ],
       "ocr": [],
       "supersedes": ["BATTLE"]
@@ -62,6 +73,8 @@
         {"name": "close", "template": "map-close.png", "search_region": [0.0, 0.0, 0.18, 0.16], "threshold": 0.92, "scales": [0.9, 0.95, 1.0, 1.05, 1.1]},
         {"name": "menu", "template": "map-menu.png", "search_region": [0.78, 0.76, 1.0, 1.0], "threshold": 0.92, "scales": [0.9, 0.95, 1.0, 1.05, 1.1]},
         {"name": "main_quest", "template": "map-main-quest.png", "search_region": [0.48, 0.13, 0.92, 0.40], "threshold": 0.92, "scales": [0.9, 0.95, 1.0, 1.05, 1.1]},
+        {"name": "main_quest_x_c", "template": "map-main-quest-x-c.png", "search_region": [0.35, 0.45, 0.75, 0.68], "threshold": 0.92, "scales": [0.9, 0.95, 1.0, 1.05]},
+        {"name": "main_quest_x_b", "template": "map-main-quest-x-b.png", "search_region": [0.30, 0.45, 0.72, 0.72], "threshold": 0.92, "scales": [0.9, 0.95, 1.0, 1.05]},
         {"name": "free_quest", "template": "map-free-quest.png", "search_region": [0.42, 0.31, 0.75, 0.68], "threshold": 0.92, "scales": [0.9, 0.95, 1.0, 1.05, 1.1]}
       ],
       "ocr": [
