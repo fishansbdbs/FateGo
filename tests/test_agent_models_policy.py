@@ -45,6 +45,24 @@ def test_all_saint_quartz_actions_are_rejected() -> None:
     assert decision.reason == "saint_quartz_forbidden"
 
 
+def test_command_spells_are_always_forbidden_even_on_defeat() -> None:
+    gate = PolicyGate(minimum_confidence=0.92)
+    decision = gate.evaluate(
+        observation(ScreenKind.DEFEAT),
+        proposal(
+            kind=ActionKind.USE_COMMAND_SPELL,
+            resource=ResourceKind.COMMAND_SPELL,
+            resource_cost=1,
+        ),
+    )
+    assert not decision.allowed
+    assert decision.reason == "command_spells_forbidden"
+    assert gate.evaluate(
+        observation(ScreenKind.DEFEAT, ("Use Command Spell",)),
+        proposal(kind=ActionKind.WAIT, target=None),
+    ).reason == "command_spells_forbidden"
+
+
 def test_collecting_an_explicit_saint_quartz_quest_reward_is_allowed_without_spend_authority() -> None:
     gate = PolicyGate(minimum_confidence=0.92)
     state = observation(

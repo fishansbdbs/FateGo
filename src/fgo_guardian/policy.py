@@ -39,7 +39,7 @@ ALLOWED_BY_SCREEN = {
     },
     ScreenKind.QUEST_RESULT: {ActionKind.COLLECT_RESULT, ActionKind.WAIT},
     ScreenKind.AP_REFILL: {ActionKind.RESTORE_AP, ActionKind.WAIT},
-    ScreenKind.DEFEAT: {ActionKind.USE_COMMAND_SPELL, ActionKind.WAIT},
+    ScreenKind.DEFEAT: {ActionKind.WAIT},
     ScreenKind.TUTORIAL_SUMMON: {ActionKind.TUTORIAL_FREE_SUMMON, ActionKind.ADVANCE_TUTORIAL, ActionKind.WAIT},
     ScreenKind.TUTORIAL_FORMATION: {ActionKind.TUTORIAL_FORMATION, ActionKind.ADVANCE_TUTORIAL, ActionKind.WAIT},
     ScreenKind.LOADING: {ActionKind.WAIT},
@@ -119,6 +119,13 @@ class PolicyGate:
             "paid" in label for label in compact_labels
         ):
             return PolicyDecision(False, "paid_currency_forbidden")
+        if (
+            action.kind is ActionKind.USE_COMMAND_SPELL
+            or action.resource is ResourceKind.COMMAND_SPELL
+            or ({"command", "spell"} <= tokens)
+            or any("commandspell" in label for label in compact_labels)
+        ):
+            return PolicyDecision(False, "command_spells_forbidden")
         if action.kind in FORBIDDEN_ACTIONS:
             return PolicyDecision(False, "action_forbidden")
         if action.resource is ResourceKind.SUMMON_TICKET or "ticket" in tokens or any(
@@ -133,7 +140,6 @@ class PolicyGate:
             return PolicyDecision(False, "invalid_resource_cost")
         if action.resource is not ResourceKind.NONE and action.kind not in {
             ActionKind.RESTORE_AP,
-            ActionKind.USE_COMMAND_SPELL,
         }:
             return PolicyDecision(False, "resource_not_valid_for_action")
         observed_tokens, observed_compact_labels = self._label_signals(state.labels)
@@ -174,8 +180,6 @@ class PolicyGate:
             return PolicyDecision(False, "dialogue_choice_not_mandatory")
         if action.kind is ActionKind.RESTORE_AP and action.resource not in APPLE_RESOURCES:
             return PolicyDecision(False, "ap_restore_resource_forbidden")
-        if action.kind is ActionKind.USE_COMMAND_SPELL and action.resource is not ResourceKind.COMMAND_SPELL:
-            return PolicyDecision(False, "revive_resource_forbidden")
         if action.target is not None:
             if not self._inside(action.target, state.viewport):
                 return PolicyDecision(False, "outside_viewport")

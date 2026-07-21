@@ -282,7 +282,7 @@ git commit -m "feat: plan FGO story quest navigation"
 - Consumes: visible `BattleState` containing wave, enemies, allies, HP, NP, available Servant/Master skills, target state, command cards, and tutorial constraints.
 - Produces: exactly one legal semantic action per decision phase.
 
-- [ ] **Step 1: Write failing skill, NP, card, and resource tests**
+- [x] **Step 1: Write failing skill, NP, card, and resource tests**
 
 ```python
 def test_available_damage_skill_is_used_on_final_wave_before_attack():
@@ -300,11 +300,11 @@ def test_forbidden_resources_have_no_battle_candidate(resource):
     assert agent.candidates(defeat_state(resource)) == ()
 ```
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 Run: `.\.venv\Scripts\python.exe -m pytest tests\test_battle.py -q`
 
-- [ ] **Step 3: Implement explainable candidate scoring**
+- [x] **Step 3: Implement explainable candidate scoring**
 
 ```python
 @dataclass(frozen=True, slots=True)
@@ -319,13 +319,13 @@ def choose(candidates: Sequence[ScoredAction]) -> ScoredAction:
 
 The first policy uses recognized safe Servant and Master skills, prioritizes survival when an ally is low, NP charge when it enables an NP, damage buffs on the final/high-HP wave, ready NPs before ordinary cards, class-effective cards, brave chains, and deterministic stable-key tie breaks. Skill target modals are handled as separate fresh observations.
 
-- [ ] **Step 4: Run battle, policy, replay, and complete tests**
+- [x] **Step 4: Run battle, policy, replay, and complete tests**
 
 Run: `.\.venv\Scripts\python.exe -m pytest tests\test_battle.py tests\test_agent_models_policy.py tests\test_replay.py -q`
 
 Run: `.\.venv\Scripts\python.exe -m pytest -q`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add src/fgo_guardian/battle.py config/battle_policy.json tests/test_battle.py

@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "low_hp_ratio": 0.45,
+  "near_ready_np": 70,
+  "weights": {
+    "attack_score": 100,
+    "survival_score": 1600,
+    "heal_score": 1500,
+    "np_charge_score": 1400,
+    "final_wave_damage_score": 1000,
+    "high_hp_enemy_bonus": 200,
+    "master_skill_bonus": 20,
+    "np_score": 3000,
+    "effectiveness_score": 500,
+    "brave_chain_bonus": 300
+  },
+  "resources": {
+    "saint_quartz": "never",
+    "command_spells": "never",
+    "summon_tickets": "never"
+  }
+}
