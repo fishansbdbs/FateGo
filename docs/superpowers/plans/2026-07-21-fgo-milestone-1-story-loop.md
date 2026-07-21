@@ -400,7 +400,7 @@ git commit -m "feat: recover safely and stop with defeat diagnostics"
 - Consumes all earlier subsystems through constructor-injected interfaces.
 - Produces: `StoryLoop.tick() -> LoopOutcome` and a `--simulation <recording>` CLI mode with no input capability.
 
-- [ ] **Step 1: Write failing end-to-end recorded transition tests**
+- [x] **Step 1: Write failing end-to-end recorded transition tests**
 
 ```python
 def test_fuyuki_replay_reaches_map_after_battle_without_unknown_actions(recording):
@@ -416,11 +416,11 @@ def test_manual_pause_wins_before_executor_call(loop):
     assert loop.executor.calls == 0
 ```
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 Run: `.\.venv\Scripts\python.exe -m pytest tests\test_story_loop.py tests\test_simulation.py -q`
 
-- [ ] **Step 3: Implement the one-action loop**
+- [x] **Step 3: Implement the one-action loop**
 
 ```python
 def tick(self) -> LoopOutcome:
@@ -437,13 +437,13 @@ def tick(self) -> LoopOutcome:
 
 The configured stop condition supports manual stop, quest count, wall-clock deadline, defeat, unknown state, prohibited prompt, or no eligible quest.
 
-- [ ] **Step 4: Run simulation and complete tests**
+- [x] **Step 4: Run simulation and complete tests**
 
 Run: `.\.venv\Scripts\python.exe -m pytest tests\test_story_loop.py tests\test_simulation.py -q`
 
 Run: `.\.venv\Scripts\python.exe -m pytest -q`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add src/fgo_guardian/story_loop.py src/fgo_guardian/simulation.py src/fgo_guardian/app.py tests/test_story_loop.py tests/test_simulation.py

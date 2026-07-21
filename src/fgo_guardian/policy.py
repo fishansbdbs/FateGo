@@ -42,7 +42,7 @@ ALLOWED_BY_SCREEN = {
     ScreenKind.DEFEAT: {ActionKind.WAIT},
     ScreenKind.TUTORIAL_SUMMON: {ActionKind.TUTORIAL_FREE_SUMMON, ActionKind.ADVANCE_TUTORIAL, ActionKind.WAIT},
     ScreenKind.TUTORIAL_FORMATION: {ActionKind.TUTORIAL_FORMATION, ActionKind.ADVANCE_TUTORIAL, ActionKind.WAIT},
-    ScreenKind.LOADING: {ActionKind.WAIT},
+    ScreenKind.LOADING: {ActionKind.RETRY, ActionKind.WAIT},
 }
 
 

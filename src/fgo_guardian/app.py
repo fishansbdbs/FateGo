@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import asdict
+import json
+from pathlib import Path
 import tkinter as tk
 from tkinter import ttk
 
 from .controller import AutomationController, ControllerSnapshot, RunState, StopReason
+from .simulation import StorySimulation
 
 
 class ControlPanel:
@@ -108,16 +112,42 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="FateGo local automation controls")
     parser.add_argument(
         "--simulation",
+        nargs="?",
+        const="",
+        metavar="RECORDING",
+        help="disable input; optionally replay a recording headlessly",
+    )
+    parser.add_argument(
+        "--mode",
+        choices=("story", "all-quests", "farming"),
+        default="story",
+        help="quest-selection mode (live wiring is enabled only after the acceptance gate)",
+    )
+    parser.add_argument("--max-quests", type=int, default=1)
+    parser.add_argument(
+        "--shadow",
         action="store_true",
-        help="run the control surface with visible input disabled",
+        help="observe and log predictions without visible input",
     )
     return parser
 
 
 def main(argv: list[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
+    if args.max_quests <= 0:
+        raise SystemExit("--max-quests must be positive")
+    if args.simulation:
+        report = StorySimulation.from_recording(Path(args.simulation)).run(
+            stop_after_quests=args.max_quests
+        )
+        print(json.dumps(asdict(report), indent=2, sort_keys=True))
+        return
     root = tk.Tk()
-    ControlPanel(root, AutomationController(), simulation=args.simulation)
+    ControlPanel(
+        root,
+        AutomationController(),
+        simulation=args.simulation is not None or args.shadow,
+    )
     root.mainloop()
 
 
