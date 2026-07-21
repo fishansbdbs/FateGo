@@ -1,0 +1,15 @@
+{
+  "target_executable": "C:\\LDPlayer\\LDPlayer14\\dnplayer.exe",
+  "target_title": "LDPlayer",
+  "ldplayer_version": "14.0.15.0",
+  "game_tab_title": "Fate/GO",
+  "game_package": "com.aniplex.fategrandorder.en",
+  "game_version": "2.90.2",
+  "android_resolution": [1920, 1080],
+  "android_dpi": 280,
+  "orientation": "landscape",
+  "confidence_threshold": 0.92,
+  "stale_timeout_seconds": 10.0,
+  "emergency_hotkey": "ctrl+shift+f12",
+  "capture_interval_ms": 250
+}

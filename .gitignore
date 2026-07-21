@@ -1,0 +1,11 @@
+.venv/
+.pytest_cache/
+**/__pycache__/
+*.egg-info/
+.coverage
+.superpowers/
+.gh-auth.*.log
+build/
+dist/
+data/recordings/*
+!data/recordings/.gitignore

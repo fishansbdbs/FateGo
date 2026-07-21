@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=80"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fgo-autonomous-agent"
+version = "0.2.0"
+description = "Standalone visible-screen Fate/Grand Order quest agent for one LDPlayer window"
+requires-python = ">=3.14,<3.15"
+dependencies = [
+  "mss==10.2.0",
+  "numpy==2.5.1",
+  "opencv-python-headless==5.0.0.93",
+  "Pillow==12.3.0",
+  "pywin32==312; platform_system == 'Windows'",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest==9.1.1",
+  "pytest-cov==7.1.0",
+  "pyinstaller==6.21.0",
+]
+
+[project.scripts]
+fgo-guardian = "fgo_guardian.app:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-markers"
+testpaths = ["tests"]
