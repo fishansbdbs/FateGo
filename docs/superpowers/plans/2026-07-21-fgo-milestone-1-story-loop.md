@@ -34,7 +34,7 @@
 - `AutomationController.start()`, `.pause()`, `.resume()`, `.stop()`, and `.emergency_stop()` are thread-safe.
 - `AutomationController.step(stepper)` invokes at most one gameplay action and never invokes `stepper` unless state is `RUNNING`.
 
-- [ ] **Step 1: Write failing lifecycle tests**
+- [x] **Step 1: Write failing lifecycle tests**
 
 ```python
 def test_pause_and_stop_prevent_the_next_action() -> None:
@@ -50,13 +50,13 @@ def test_pause_and_stop_prevent_the_next_action() -> None:
     assert calls == ["click"]
 ```
 
-- [ ] **Step 2: Run the tests and verify RED**
+- [x] **Step 2: Run the tests and verify RED**
 
 Run: `.\.venv\Scripts\python.exe -m pytest tests\test_controller.py -q`
 
 Expected: import failure because `fgo_guardian.controller` does not exist.
 
-- [ ] **Step 3: Implement the lifecycle and control panel**
+- [x] **Step 3: Implement the lifecycle and control panel**
 
 ```python
 class RunState(StrEnum):
@@ -77,7 +77,7 @@ class AutomationController:
 
 `app.py` creates a Tkinter window outside the LDPlayer rectangle with Start, Pause/Resume, Stop, and Emergency Stop buttons bound only to these controller methods.
 
-- [ ] **Step 4: Run controller tests and the complete suite**
+- [x] **Step 4: Run controller tests and the complete suite**
 
 Run: `.\.venv\Scripts\python.exe -m pytest tests\test_controller.py -q`
 
@@ -85,7 +85,7 @@ Run: `.\.venv\Scripts\python.exe -m pytest -q`
 
 Expected: all tests pass and `python -m fgo_guardian.app --simulation` opens without arming input.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add src/fgo_guardian/controller.py src/fgo_guardian/app.py tests/test_controller.py
@@ -107,7 +107,7 @@ git commit -m "feat: add deterministic runtime controls"
 - Produces: `Recognition(screen, confidence, anchors, text, evidence, frame_sha256)`.
 - Produces: `ScreenRecognizer.recognize(frame, mapping) -> Recognition`; it is pure and deterministic for a fixed catalog version.
 
-- [ ] **Step 1: Write failing recorded-frame and ambiguity tests**
+- [x] **Step 1: Write failing recorded-frame and ambiguity tests**
 
 ```python
 @pytest.mark.parametrize("label", ["STORY", "SKIP_CONFIRM", "SUPPORT_SELECT", "PARTY_CONFIRM", "BATTLE", "QUEST_RESULT", "TUTORIAL_MAP"])
@@ -120,13 +120,13 @@ def test_conflicting_anchors_return_unknown(conflicting_frame):
     assert recognizer.recognize(conflicting_frame.image, conflicting_frame.mapping).screen is ScreenKind.UNKNOWN
 ```
 
-- [ ] **Step 2: Run recognition tests and verify RED**
+- [x] **Step 2: Run recognition tests and verify RED**
 
 Run: `.\.venv\Scripts\python.exe -m pytest tests\test_recognition.py -q`
 
 Expected: import failure because the recognition modules do not exist.
 
-- [ ] **Step 3: Implement bounded OCR, templates, and validators**
+- [x] **Step 3: Implement bounded OCR, templates, and validators**
 
 ```python
 @dataclass(frozen=True, slots=True)
@@ -147,13 +147,13 @@ class ScreenRecognizer:
 
 Use grayscale/multiscale `cv2.matchTemplate`, geometric anchor agreement, and OCR limited to configured regions. Story requires the top-right Skip anchor plus story-panel geometry; every other family requires at least two independent anchors. Do not classify from OCR text alone.
 
-- [ ] **Step 4: Run recognition tests, replay tests, and the complete suite**
+- [x] **Step 4: Run recognition tests, replay tests, and the complete suite**
 
 Run: `.\.venv\Scripts\python.exe -m pytest tests\test_recognition.py tests\test_replay.py -q`
 
 Run: `.\.venv\Scripts\python.exe -m pytest -q`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add src/fgo_guardian/recognition.py src/fgo_guardian/ocr.py src/fgo_guardian/template_catalog.py config/recognition.json templates/manifest.json tests/test_recognition.py

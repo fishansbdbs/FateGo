@@ -1,0 +1,11 @@
+{
+  "manifest": "../templates/manifest.json",
+  "unknown_policy": "pause",
+  "minimum_family_anchors": 2,
+  "ocr": {
+    "engine": "tesseract",
+    "language": "eng",
+    "page_segmentation_mode": 7,
+    "timeout_seconds": 5.0
+  }
+}
