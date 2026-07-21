@@ -5,6 +5,7 @@
 .coverage
 .superpowers/
 .gh-auth.*.log
+.worktrees/
 build/
 dist/
 data/recordings/*
