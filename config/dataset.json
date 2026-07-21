@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "root": "../data/experience",
+  "quarantine_unknowns": true,
+  "promotion": {
+    "require_zero_regressions": true,
+    "require_passing_cases": true,
+    "activate_on_next_run": true
+  },
+  "storage": {
+    "format": "append-only-jsonl",
+    "images": "privacy-redacted-png",
+    "content_addressed": true
+  }
+}

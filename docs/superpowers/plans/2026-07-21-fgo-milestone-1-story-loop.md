@@ -172,7 +172,7 @@ git commit -m "feat: recognize deterministic FGO screen families"
 - Produces: `ExperienceStore.quarantine_unknown(...)`, `.record_transition(...)`, and `.promote(candidate_id, regression_report)`.
 - Active and quarantined datasets use immutable version IDs and append-only JSONL manifests.
 
-- [ ] **Step 1: Write failing quarantine and promotion tests**
+- [x] **Step 1: Write failing quarantine and promotion tests**
 
 ```python
 def test_unknown_is_quarantined_and_cannot_become_actionable(tmp_path):
@@ -187,11 +187,11 @@ def test_promotion_requires_zero_regressions(tmp_path):
         store.promote("candidate-1", RegressionReport(failures=("story->battle",)))
 ```
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 Run: `.\.venv\Scripts\python.exe -m pytest tests\test_experience.py -q`
 
-- [ ] **Step 3: Implement append-only versioned storage**
+- [x] **Step 3: Implement append-only versioned storage**
 
 ```python
 def promote(self, candidate_id: str, report: RegressionReport) -> DatasetVersion:
@@ -203,13 +203,13 @@ def promote(self, candidate_id: str, report: RegressionReport) -> DatasetVersion
 
 Unknown screenshots are privacy-redacted before persistence. Promotion never changes thresholds, policy rules, or existing labels; it adds a new catalog version selected only on the next run.
 
-- [ ] **Step 4: Run dataset, privacy, replay, and complete tests**
+- [x] **Step 4: Run dataset, privacy, replay, and complete tests**
 
 Run: `.\.venv\Scripts\python.exe -m pytest tests\test_experience.py tests\test_privacy_recording.py tests\test_replay.py -q`
 
 Run: `.\.venv\Scripts\python.exe -m pytest -q`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add src/fgo_guardian/experience.py config/dataset.json tests/test_experience.py
