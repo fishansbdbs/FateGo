@@ -342,7 +342,7 @@ git commit -m "feat: add explainable FGO battle decisions"
 - Consumes: unknown, loading, network, AP, inventory, prohibited, and defeat states.
 - Produces: `RecoveryDecision` with `WAIT`, `RETRY`, `USE_APPLE`, `PAUSE`, or `STOP`; only `USE_APPLE` may consume a limited resource.
 
-- [ ] **Step 1: Write failing defeat, unknown, and Apple tests**
+- [x] **Step 1: Write failing defeat, unknown, and Apple tests**
 
 ```python
 def test_defeat_persists_diagnostic_and_stops(tmp_path):
@@ -359,11 +359,11 @@ def test_ap_shortage_selects_apple_but_never_quartz():
     assert manager.handle(ap_with_only_quartz, frame, root).kind is RecoveryKind.STOP
 ```
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 Run: `.\.venv\Scripts\python.exe -m pytest tests\test_recovery.py -q`
 
-- [ ] **Step 3: Implement recovery decisions and redacted incidents**
+- [x] **Step 3: Implement recovery decisions and redacted incidents**
 
 ```python
 if state.screen is ScreenKind.DEFEAT:
@@ -374,13 +374,13 @@ if state.screen is ScreenKind.UNKNOWN:
     return RecoveryDecision.pause(StopReason.UNKNOWN_SCREEN)
 ```
 
-- [ ] **Step 4: Run recovery, privacy, policy, and complete tests**
+- [x] **Step 4: Run recovery, privacy, policy, and complete tests**
 
 Run: `.\.venv\Scripts\python.exe -m pytest tests\test_recovery.py tests\test_privacy_recording.py tests\test_agent_models_policy.py -q`
 
 Run: `.\.venv\Scripts\python.exe -m pytest -q`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add src/fgo_guardian/recovery.py tests/test_recovery.py

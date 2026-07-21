@@ -34,8 +34,6 @@ class CandidateProposal:
     source_catalog_version: str
 
     def __post_init__(self) -> None:
-        if self.proposed_screen is ScreenKind.UNKNOWN:
-            raise ValueError("candidate proposal must name a screen family")
         if not 0.0 <= self.confidence <= 1.0:
             raise ValueError("candidate confidence must be between zero and one")
         if not self.evidence or not all(item for item in self.evidence):
@@ -269,6 +267,8 @@ class ExperienceStore:
             }
             if candidate_id not in candidates:
                 raise KeyError(candidate_id)
+            if candidates[candidate_id].proposed_screen is ScreenKind.UNKNOWN:
+                raise PermissionError("candidate must be classified before promotion")
             parent = self.active_version()
             active_ids = parent.candidate_ids if parent is not None else ()
             if candidate_id in active_ids:
