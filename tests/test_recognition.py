@@ -208,3 +208,7 @@ def test_recorded_fuyuki_screen_family_is_recognized(
 
     assert result.screen is screen
     assert result.confidence >= 0.92
+    if screen is ScreenKind.PARTY_CONFIRM:
+        assert "teapot_off" in result.anchors
+    if screen is ScreenKind.TUTORIAL_MAP:
+        assert {"main_quest", "free_quest"} <= set(result.anchors)

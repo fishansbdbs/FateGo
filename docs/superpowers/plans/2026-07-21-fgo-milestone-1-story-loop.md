@@ -226,7 +226,7 @@ git commit -m "feat: quarantine and promote recognition experience"
 - Consumes: `Recognition`, operating mode, and persisted `QuestGraph`.
 - Produces: one `ActionProposal` for Skip, Skip confirmation, dialogue choice, quest card, support row, party start, result collection, or safe wait.
 
-- [ ] **Step 1: Write failing Story-loop navigation tests**
+- [x] **Step 1: Write failing Story-loop navigation tests**
 
 ```python
 def test_story_skip_has_priority_over_every_other_control():
@@ -241,11 +241,11 @@ def test_support_selects_guest_or_highest_compatible_visible_row():
     assert planner.plan(support_recognition()).kind is ActionKind.SELECT_SUPPORT
 ```
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 Run: `.\.venv\Scripts\python.exe -m pytest tests\test_quest_planner.py -q`
 
-- [ ] **Step 3: Implement deterministic screen-specific planning**
+- [x] **Step 3: Implement deterministic screen-specific planning**
 
 ```python
 class QuestPlanner:
@@ -258,13 +258,13 @@ class QuestPlanner:
 
 The planner preserves prepared party/CE state, verifies Auto Teapot is OFF, selects Guest support when required, otherwise scores visible compatible supports deterministically, and never invents a target outside recognized anchors.
 
-- [ ] **Step 4: Run planner, policy, replay, and complete tests**
+- [x] **Step 4: Run planner, policy, replay, and complete tests**
 
 Run: `.\.venv\Scripts\python.exe -m pytest tests\test_quest_planner.py tests\test_agent_models_policy.py tests\test_replay.py -q`
 
 Run: `.\.venv\Scripts\python.exe -m pytest -q`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add src/fgo_guardian/quest_planner.py tests/test_quest_planner.py
