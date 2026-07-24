@@ -22,15 +22,15 @@ from .models import Rect
 from .viewport_mapper import ViewportMapping
 
 
-# Normalised layout for FGO NA landscape.
-ATTACK_BUTTON = (0.905, 0.855)
+# Normalised layout for FGO NA landscape (verified against the live game).
+ATTACK_BUTTON = (0.865, 0.73)
 # Five command cards spread along the lower third once the card screen opens.
 COMMAND_CARDS = [
-    (0.15, 0.70),
-    (0.325, 0.70),
-    (0.50, 0.70),
-    (0.675, 0.70),
-    (0.85, 0.70),
+    (0.125, 0.70),
+    (0.312, 0.70),
+    (0.502, 0.70),
+    (0.690, 0.70),
+    (0.875, 0.70),
 ]
 # "Attack" again / next-wave has no separate button; the loop re-detects.
 

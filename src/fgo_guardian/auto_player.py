@@ -29,7 +29,7 @@ import numpy as np
 
 from .battle import BattleAgent
 from .input_controller import InputController, SafetyGate
-from .navigator import Navigator, PARTY_START_BUTTON, SUPPORT_FIRST_ROW
+from .navigator import Navigator, PARTY_START_BUTTON, QUEST_BANNER, SUPPORT_FIRST_ROW
 from .perception import Perception, Screen, frame_signature, frames_differ
 from .screen_capture import CaptureBlocked, SafeCapture
 from .viewport_mapper import ViewportMapper
@@ -37,7 +37,7 @@ from .viewport_mapper import ViewportMapper
 
 # Generic tap targets used when tapping through non-battle screens.
 SKIP_BUTTON = (0.932, 0.055)          # story/cutscene Skip pill, top-right
-ADVANCE_BOTTOM_RIGHT = (0.90, 0.92)   # Next / Close on result-style screens
+ADVANCE_BOTTOM_RIGHT = (0.90, 0.875)  # Next / Close on result-style screens (y verified)
 ADVANCE_CENTER = (0.50, 0.62)         # "tap to continue" dialogue advance
 
 
@@ -146,6 +146,15 @@ class AutoPlayer:
             return
 
         if screen is Screen.MAP:
+            if self._post_start_flow:
+                # A node was just selected and its quest banner is up. Tap the
+                # banner to go to support selection instead of re-selecting a
+                # different node (verified flow: node -> banner -> support).
+                self.tap.tap_normalized(frame_rect, mapping, *QUEST_BANNER, settle=0.5)
+                self._post_start_flow += 1
+                if self._post_start_flow > 4:
+                    self._post_start_flow = 0
+                return
             target = self.navigator.select_quest(frame_rect, mapping, mapping.crop(image_rgb))
             if target is None:
                 self._map_misses += 1

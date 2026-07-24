@@ -73,6 +73,21 @@ def _mask_fraction(hsv: np.ndarray, region, lo, hi) -> float:
     return float(np.count_nonzero(mask)) / mask.size
 
 
+def _largest_blob_frac(hsv: np.ndarray, region, lo, hi) -> float:
+    """Area (as a fraction of the whole frame) of the largest colour blob in a region."""
+    x0, y0, x1, y1 = region
+    h, w = hsv.shape[:2]
+    sub = hsv[int(y0 * h):int(y1 * h), int(x0 * w):int(x1 * w)]
+    if sub.size == 0:
+        return 0.0
+    mask = cv2.inRange(sub, np.array(lo, np.uint8), np.array(hi, np.uint8))
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if not contours:
+        return 0.0
+    return float(max(cv2.contourArea(c) for c in contours)) / float(h * w)
+
+
 def _find_blobs(hsv: np.ndarray, lo, hi, min_area_frac: float) -> list[Marker]:
     h, w = hsv.shape[:2]
     mask = cv2.inRange(hsv, np.array(lo, np.uint8), np.array(hi, np.uint8))
@@ -106,14 +121,15 @@ class Perception:
         hsv = _hsv(view)
         mean_v = float(hsv[:, :, 2].mean())
 
-        # Attack button: saturated red disc in the lower-right quadrant.
-        attack_region = (0.82, 0.74, 0.99, 0.99)
-        red = _mask_fraction(hsv, attack_region, *HSV_ATTACK_RED) + _mask_fraction(
-            hsv, attack_region, *HSV_ATTACK_RED2
-        )
-        if red > 0.06:
-            return Reading(Screen.BATTLE_COMMAND, min(1.0, 0.6 + red), mean_value=mean_v,
-                           note=f"attack_red={red:.3f}")
+        # Attack button: a large, vivid disc in the lower-right. Live testing
+        # showed its hue is BLUE here (not the red assumed earlier) and can vary
+        # by state/version, so detect it by size + saturation/brightness rather
+        # than a specific colour. The area threshold keeps the smaller blue map
+        # "MENU" button from being mistaken for it.
+        attack = _largest_blob_frac(hsv, (0.78, 0.58, 1.0, 0.93), (0, 90, 160), (179, 255, 255))
+        if attack >= 0.015:
+            return Reading(Screen.BATTLE_COMMAND, min(1.0, 0.55 + attack * 5), mean_value=mean_v,
+                           note=f"attack_blob={attack:.4f}")
 
         # Quest markers: orange "1" badges and blue chevrons across the map.
         badges = _find_blobs(hsv, *HSV_ORANGE_BADGE, min_area_frac=0.00035)

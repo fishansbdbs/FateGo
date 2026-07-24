@@ -32,9 +32,10 @@ from .viewport_mapper import ViewportMapping
 # Post-selection flow tap targets (normalised). These are the standard FGO NA
 # landscape positions and are the first thing to re-calibrate live if a step
 # stalls.
-START_QUEST_BUTTON = (0.885, 0.92)     # quest-detail "Start"
-SUPPORT_FIRST_ROW = (0.50, 0.34)       # first support entry in the list
-PARTY_START_BUTTON = (0.90, 0.92)      # party screen "Start"
+START_QUEST_BUTTON = (0.885, 0.875)    # quest-detail "Start" (y verified: 0.92 hit the taskbar)
+SUPPORT_FIRST_ROW = (0.42, 0.36)       # first support entry in the list
+PARTY_START_BUTTON = (0.888, 0.874)    # party screen "Start Quest"
+QUEST_BANNER = (0.70, 0.28)            # highlighted quest banner shown after tapping a map node
 
 
 @dataclass(slots=True)
@@ -61,7 +62,9 @@ def pick_quest_target(badges: list[Marker], chevrons: list[Marker]) -> QuestTarg
     """
 
     def near_badge(c: Marker) -> bool:
-        return any((c.nx - b.nx) ** 2 + (c.ny - b.ny) ** 2 < 0.14 ** 2 for b in badges)
+        # Verified live: a node's badge sits ~0.13-0.19 (normalised) from its
+        # banner, so the association radius must be generous.
+        return any((c.nx - b.nx) ** 2 + (c.ny - b.ny) ** 2 < 0.22 ** 2 for b in badges)
 
     if chevrons:
         badged = [c for c in chevrons if near_badge(c)]
