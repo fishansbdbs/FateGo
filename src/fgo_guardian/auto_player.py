@@ -37,7 +37,7 @@ from .viewport_mapper import ViewportMapper
 
 # Generic tap targets used when tapping through non-battle screens.
 SKIP_BUTTON = (0.932, 0.055)          # story/cutscene Skip pill, top-right
-ADVANCE_BOTTOM_RIGHT = (0.90, 0.875)  # Next / Close on result-style screens (y verified)
+ADVANCE_BOTTOM_RIGHT = (0.86, 0.86)   # "Next" on result screens (verified on the drops screen)
 ADVANCE_CENTER = (0.50, 0.62)         # "tap to continue" dialogue advance
 
 
@@ -158,8 +158,14 @@ class AutoPlayer:
             target = self.navigator.select_quest(frame_rect, mapping, mapping.crop(image_rgb))
             if target is None:
                 self._map_misses += 1
+                # Pan the map to reveal off-screen nodes (alternate directions)
+                # before concluding the map is fully cleared.
+                if self._map_misses % 2 == 1:
+                    self.tap.drag_normalized(frame_rect, mapping, 0.75, 0.5, 0.25, 0.5, settle=0.5)
+                else:
+                    self.tap.drag_normalized(frame_rect, mapping, 0.25, 0.5, 0.75, 0.5, settle=0.5)
                 if self._map_misses >= self.tuning.max_map_misses:
-                    self.log("paused: on a map but found no available quest markers")
+                    self.log("paused: no available quests found after panning the map")
                     time.sleep(0.6)
                 return
             self._map_misses = 0

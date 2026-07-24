@@ -120,6 +120,11 @@ class InputController:
             time.sleep(settle)
         return True
 
+    def _norm_to_screen(self, frame_rect: Rect, mapping: ViewportMapping, nx: float, ny: float) -> tuple[int, int]:
+        img_x = mapping.viewport.left + nx * mapping.viewport.width
+        img_y = mapping.viewport.top + ny * mapping.viewport.height
+        return int(round(frame_rect.left + img_x)), int(round(frame_rect.top + img_y))
+
     def tap_normalized(
         self,
         frame_rect: Rect,
@@ -134,8 +139,41 @@ class InputController:
 
         nx = min(0.999, max(0.001, nx + random.uniform(-jitter, jitter)))
         ny = min(0.999, max(0.001, ny + random.uniform(-jitter, jitter)))
-        img_x = mapping.viewport.left + nx * mapping.viewport.width
-        img_y = mapping.viewport.top + ny * mapping.viewport.height
-        screen_x = int(round(frame_rect.left + img_x))
-        screen_y = int(round(frame_rect.top + img_y))
+        screen_x, screen_y = self._norm_to_screen(frame_rect, mapping, nx, ny)
         return self.tap_screen(screen_x, screen_y, settle=settle)
+
+    def drag_normalized(
+        self,
+        frame_rect: Rect,
+        mapping: ViewportMapping,
+        nx1: float,
+        ny1: float,
+        nx2: float,
+        ny2: float,
+        *,
+        steps: int = 12,
+        settle: float = 0.3,
+    ) -> bool:
+        """Press-drag-release in 0..1 viewport space (used to pan the map)."""
+
+        if self.safety_gate is not None and not self.safety_gate.safe():
+            return False
+        x1, y1 = self._norm_to_screen(frame_rect, mapping, nx1, ny1)
+        x2, y2 = self._norm_to_screen(frame_rect, mapping, nx2, ny2)
+        move = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK
+        ax1, ay1 = self._to_absolute(x1, y1)
+        _send_mouse(move, ax1, ay1)
+        time.sleep(0.02)
+        _send_mouse(MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK, ax1, ay1)
+        time.sleep(0.05)
+        for i in range(1, steps + 1):
+            ix = x1 + (x2 - x1) * i / steps
+            iy = y1 + (y2 - y1) * i / steps
+            aix, aiy = self._to_absolute(int(round(ix)), int(round(iy)))
+            _send_mouse(move, aix, aiy)
+            time.sleep(0.012)
+        ax2, ay2 = self._to_absolute(x2, y2)
+        _send_mouse(MOUSEEVENTF_LEFTUP | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK, ax2, ay2)
+        if settle:
+            time.sleep(settle)
+        return True
