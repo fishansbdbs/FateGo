@@ -18,6 +18,7 @@ Controls while running:
 import argparse
 import sys
 import threading
+import time
 from pathlib import Path
 
 from .auto_player import AutoPlayer, LoopTuning
@@ -50,11 +51,21 @@ def main() -> None:
     mapper = ViewportMapper()
 
     _log("locating the single LDPlayer window...")
-    try:
-        hwnd = guardian.select_unique()
-        baseline = guardian.establish_baseline(hwnd)
-    except Exception as error:
-        _log(f"could not arm: {error}")
+    _log(">>> Click the LDPlayer window now so it is the focused window. <<<")
+    _log("    (Waiting up to 60s for LDPlayer to be focused, then it arms.)")
+    baseline = None
+    last_error: Exception | None = None
+    deadline = time.time() + 60
+    while time.time() < deadline:
+        try:
+            hwnd = guardian.select_unique()
+            baseline = guardian.establish_baseline(hwnd)
+            break
+        except Exception as error:
+            last_error = error
+            time.sleep(0.7)
+    if baseline is None:
+        _log(f"could not arm: {last_error}")
         _log("make sure exactly one LDPlayer window is open, focused, and not covered.")
         sys.exit(1)
     _log("armed. FGO window locked.")

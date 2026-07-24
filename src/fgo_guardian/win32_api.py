@@ -23,6 +23,13 @@ _TRUSTED_CONTROL_OVERLAY_PATH_SUFFIX = (
     "windows",
     "codex-computer-use.exe",
 )
+# The Windows taskbar (primary + per-monitor) is a topmost shell window that
+# overlaps the bottom edge of a maximised LDPlayer window. It does not cover the
+# game's controls, so it must not count as an "overlap" blocker or the agent can
+# never arm on a normal multi-monitor setup.
+_IGNORED_OVERLAP_CLASSES = frozenset(
+    {"Shell_TrayWnd", "Shell_SecondaryTrayWnd"}
+)
 _TRUSTED_CONTROL_OVERLAY_CLASS = "CodexComputerUseCursorOverlay"
 _TRUSTED_CONTROL_OVERLAY_TITLES = frozenset(
     {
@@ -181,10 +188,15 @@ class PyWin32WindowApi:
                 and not self._is_cloaked_query(current)
             ):
                 rect = self._rect(win32gui.GetWindowRect(current))
+                try:
+                    window_class = win32gui.GetClassName(current)
+                except Exception:
+                    window_class = ""
                 if (
                     rect.width > 0
                     and rect.height > 0
                     and rect.intersects(protected_rect)
+                    and window_class not in _IGNORED_OVERLAP_CLASSES
                     and not self._is_trusted_control_overlay(current)
                 ):
                     blockers.append((current, rect))
